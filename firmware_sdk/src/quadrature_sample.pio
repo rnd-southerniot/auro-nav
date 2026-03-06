@@ -1,0 +1,9 @@
+.program quadrature_sample
+
+; Sample two encoder pins and push one 2-bit sample to RX FIFO.
+; CPU-side code performs transition decoding to signed counts.
+.wrap_target
+    mov isr, null
+    in pins, 2
+    push block
+.wrap

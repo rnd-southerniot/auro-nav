@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>auro_nav</name>
+  <version>0.1.0</version>
+  <description>Airborne Classic autonomous navigation</description>
+  <maintainer email="rnd@southerniot.com">Southern IoT RnD</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>sensor_msgs</depend>
+  <exec_depend>navigation2</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>sllidar_ros2</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

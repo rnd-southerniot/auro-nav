@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Airborne Classic NDJSON v1",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "Command",
+      "type": "object",
+      "required": ["type", "id", "ts", "cmd"],
+      "properties": {
+        "type": {"const": "cmd"},
+        "id": {"type": "string"},
+        "ts": {"type": "integer"},
+        "cmd": {"type": "string"},
+        "left": {"type": "number"},
+        "right": {"type": "number"}
+      },
+      "additionalProperties": true
+    },
+    {
+      "title": "Telemetry",
+      "type": "object",
+      "required": ["type", "ts", "mode", "armed"],
+      "properties": {
+        "type": {"const": "tele"},
+        "ts": {"type": "integer"},
+        "mode": {"type": "string"},
+        "armed": {"type": "boolean"},
+        "pwm_l": {"type": "number"},
+        "pwm_r": {"type": "number"},
+        "enc_l": {"type": "integer"},
+        "enc_r": {"type": "integer"},
+        "rpm_l": {"type": "number"},
+        "rpm_r": {"type": "number"},
+        "yaw": {"type": "number"},
+        "fault": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    {
+      "title": "Ack",
+      "type": "object",
+      "required": ["type", "id", "ok"],
+      "properties": {
+        "type": {"const": "ack"},
+        "id": {"type": "string"},
+        "ok": {"type": "boolean"},
+        "error": {
+          "type": ["object", "null"],
+          "properties": {
+            "code": {"type": "string"},
+            "message": {"type": "string"}
+          },
+          "required": ["code", "message"],
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# RP2040 UART on Pi 5 primary serial
+KERNEL=="ttyAMA0", SYMLINK+="auro", MODE="0666"

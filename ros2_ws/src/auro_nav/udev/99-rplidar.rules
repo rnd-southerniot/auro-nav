@@ -1,0 +1,2 @@
+# RPLidar C1 - CP2102 USB-to-Serial
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="rplidar", MODE="0666"

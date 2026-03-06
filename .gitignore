@@ -1,0 +1,24 @@
+# Build artifacts
+firmware_sdk/build/
+third_party/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# ROS2 build
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Maps (keep .gitkeep, ignore generated maps)
+*.pgm
+!ros2_ws/src/auro_nav/maps/.gitkeep
