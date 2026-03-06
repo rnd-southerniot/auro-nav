@@ -29,7 +29,7 @@ def generate_launch_description():
             executable='auro_bridge_node',
             name='auro_bridge',
             parameters=[{
-                'serial_port': '/dev/ttyAMA0',
+                'serial_port': '/dev/ttyACM0',
                 'baud_rate': 115200,
                 'odom_frame': 'odom',
                 'base_frame': 'base_link',

@@ -40,13 +40,14 @@ PWM frequency: 20 kHz, wrap=6249
 ## IMU: ICM-20948
 
 ### I2C bus (LOCKED)
-- I2C1: SDA=GP6, SCL=GP7, 400kHz
+- I2C0: SDA=GP16, SCL=GP17, 400kHz
 - Address: 0x68 (AD0=GND) or 0x69 (AD0=VCC), auto-detected
 
 ### Configuration
-- Gyro only (accel disabled)
+- Gyro + accel enabled (accel must stay enabled — disabling it freezes gyro output)
+- Device reset (0x80) at init required for reliable startup
 - Full scale: 500 dps (sensitivity: 65.5 LSB/dps)
-- DLPF enabled
+- DLPF enabled, GYRO_SMPLRT_DIV=0 (ODR=1125 Hz)
 - Calibration: 500-sample bias at boot
 
 ## UART Bridge: RP2040 ↔ Pi 5

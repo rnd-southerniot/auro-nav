@@ -5,7 +5,7 @@
  * Hardware: Cytron Maker Pi RP2040
  * Encoders: PIO-based quadrature (GP2/3 left, GP4/5 right)
  * Motors: H-bridge GP8-11 @ 20kHz PWM
- * IMU: ICM-20948 on I2C1 (GP6 SDA, GP7 SCL)
+ * IMU: ICM-20948 on I2C0 (GP16 SDA, GP17 SCL)
  * UART: TX=GP0, RX=GP1 (uart0) for Pi 5 bridge
  *
  * Build: see firmware_sdk/CMakeLists.txt
@@ -29,8 +29,8 @@
 /* ── Pin definitions (from HARDWARE_MAP.md) ────────────────────────── */
 #define ENC_L_PIN_BASE   2u
 #define ENC_R_PIN_BASE   4u
-#define IMU_SDA_PIN      6u
-#define IMU_SCL_PIN      7u
+#define IMU_SDA_PIN     16u
+#define IMU_SCL_PIN     17u
 #define MOTOR_L_A_PIN    8u
 #define MOTOR_L_B_PIN    9u
 #define MOTOR_R_A_PIN   10u
@@ -56,7 +56,7 @@
 #define PID_KD_DEFAULT     0.0f
 #define PID_INTEGRAL_MAX   50.0f   /* anti-windup clamp (RPM·s units) */
 #define PID_FF_GAIN        0.004f  /* feed-forward: PWM per RPM (empirical) */
-#define PWM_OUTPUT_MAX     0.40f   /* clamp: motor reverses above ~0.5 on USB power */
+#define PWM_OUTPUT_MAX     0.50f   /* clamp: motor reverses above ~0.6 PWM */
 #define PID_DT_S           0.02f   /* 50 Hz control loop */
 #define CONTROL_LOOP_MS    20u     /* = 1/PID_DT_S in ms */
 
@@ -191,7 +191,7 @@ static float pid_update(pid_state_t *p, float setpoint, float measured, float dt
 /*                      ICM-20948 IMU DRIVER                           */
 /* ──────────────────────────────────────────────────────────────────── */
 
-static i2c_inst_t *imu_i2c = i2c1;
+static i2c_inst_t *imu_i2c = i2c0;
 
 static bool imu_write_reg(uint8_t addr, uint8_t reg, uint8_t val) {
     uint8_t buf[2] = {reg, val};
@@ -233,19 +233,25 @@ static bool imu_init(imu_state_t *imu) {
 
     uint8_t addr = imu->i2c_addr;
 
-    /* Bank 0: wake up, auto-select clock */
+    /* Hard reset the device first */
     imu_select_bank(addr, 0);
+    imu_write_reg(addr, ICM20948_PWR_MGMT_1, 0x80);  /* DEVICE_RESET */
+    sleep_ms(100);
+
+    /* Wake up, auto-select clock */
     imu_write_reg(addr, ICM20948_PWR_MGMT_1, 0x01);  /* auto clock, no sleep */
     sleep_ms(30);
-    imu_write_reg(addr, ICM20948_PWR_MGMT_2, 0x07);  /* disable accel, enable gyro */
+    imu_write_reg(addr, ICM20948_PWR_MGMT_2, 0x00);  /* enable both gyro and accel */
 
-    /* Bank 2: configure gyro 500 dps */
+    /* Bank 2: configure gyro 500 dps + sample rate */
     imu_select_bank(addr, 2);
     imu_write_reg(addr, ICM20948_GYRO_CONFIG_1,
                   (uint8_t)((GYRO_FS_SEL << 1) | 0x01)); /* FS=500dps, DLPF enable */
+    imu_write_reg(addr, 0x00, 0x00);  /* GYRO_SMPLRT_DIV = 0 → ODR = 1125 Hz */
 
     /* Back to bank 0 for reading */
     imu_select_bank(addr, 0);
+    sleep_ms(30);  /* let first samples populate */
 
     return true;
 }
@@ -253,11 +259,11 @@ static bool imu_init(imu_state_t *imu) {
 static void imu_read_gyro_z(imu_state_t *imu) {
     if (!imu->present) return;
 
-    uint8_t buf[2];
-    /* Gyro Z is at offset +4 from GYRO_XOUT_H (bytes 4,5 of 6-byte block) */
-    if (imu_read_bytes(imu->i2c_addr, (uint8_t)(ICM20948_GYRO_XOUT_H + 4), buf, 2)) {
-        int16_t raw = (int16_t)((buf[0] << 8) | buf[1]);
-        imu->gyro_z_dps = (float)raw / GYRO_SENSITIVITY - imu->gyro_z_bias;
+    uint8_t buf[6];
+    /* Must read all 6 gyro bytes (X,Y,Z) to unlock register shadow on ICM-20948 */
+    if (imu_read_bytes(imu->i2c_addr, ICM20948_GYRO_XOUT_H, buf, 6)) {
+        int16_t raw_z = (int16_t)((buf[4] << 8) | buf[5]);
+        imu->gyro_z_dps = (float)raw_z / GYRO_SENSITIVITY - imu->gyro_z_bias;
     }
 }
 
@@ -277,10 +283,10 @@ static bool imu_calibrate(imu_state_t *imu, uint16_t samples) {
 
     float sum = 0.0f;
     for (uint16_t i = 0; i < samples; i++) {
-        uint8_t buf[2];
-        if (imu_read_bytes(imu->i2c_addr, (uint8_t)(ICM20948_GYRO_XOUT_H + 4), buf, 2)) {
-            int16_t raw = (int16_t)((buf[0] << 8) | buf[1]);
-            sum += (float)raw / GYRO_SENSITIVITY;
+        uint8_t buf[6];
+        if (imu_read_bytes(imu->i2c_addr, ICM20948_GYRO_XOUT_H, buf, 6)) {
+            int16_t raw_z = (int16_t)((buf[4] << 8) | buf[5]);
+            sum += (float)raw_z / GYRO_SENSITIVITY;
         }
         sleep_ms(2);
     }
@@ -385,7 +391,7 @@ static void emit_tele(const robot_state_t *s) {
         "{\"type\":\"tele\",\"ts\":%lu,\"mode\":\"%s\",\"armed\":%s,"
         "\"pwm_l\":%.3f,\"pwm_r\":%.3f,\"enc_l\":%ld,\"enc_r\":%ld,"
         "\"rpm_l\":%.1f,\"rpm_r\":%.1f,\"yaw\":%.2f,"
-        "\"pid\":%s,\"fault\":null}\n",
+        "\"pid\":%s,\"gz\":%.2f,\"fault\":null}\n",
         (unsigned long)now_ms(),
         s->armed ? "ARMED" : "DISARMED",
         s->armed ? "true" : "false",
@@ -393,7 +399,8 @@ static void emit_tele(const robot_state_t *s) {
         (long)s->enc_l, (long)s->enc_r,
         s->rpm_l, s->rpm_r,
         s->yaw_deg,
-        s->pid_enabled ? "true" : "false"
+        s->pid_enabled ? "true" : "false",
+        s->imu.gyro_z_dps
     );
 }
 
@@ -532,6 +539,43 @@ static void handle_line(
         }
         return;
     }
+    if (strstr(line, "\"cmd\":\"imu_diag\"")) {
+        if (!s->imu.present) {
+            emit_ack_err(id, "no_imu", "ICM-20948 not detected"); return;
+        }
+        uint8_t addr = s->imu.i2c_addr;
+        uint8_t pwr1 = 0xFF, pwr2 = 0xFF, who = 0xFF, int1 = 0xFF;
+        imu_select_bank(addr, 0);
+        imu_read_reg(addr, ICM20948_WHO_AM_I, &who);
+        imu_read_reg(addr, ICM20948_PWR_MGMT_1, &pwr1);
+        imu_read_reg(addr, ICM20948_PWR_MGMT_2, &pwr2);
+        imu_read_reg(addr, 0x1A, &int1);  /* INT_STATUS_1: bit0 = RAW_DATA_RDY */
+        /* Read Bank 2 gyro config */
+        imu_select_bank(addr, 2);
+        uint8_t gcfg1 = 0xFF, smplrt = 0xFF;
+        imu_read_reg(addr, 0x01, &gcfg1);  /* GYRO_CONFIG_1 */
+        imu_read_reg(addr, 0x00, &smplrt);  /* GYRO_SMPLRT_DIV */
+        imu_select_bank(addr, 0);
+        /* Read gyro raw bytes twice with 20ms gap */
+        uint8_t g1[6] = {0}, g2[6] = {0};
+        bool r1 = imu_read_bytes(addr, ICM20948_GYRO_XOUT_H, g1, 6);
+        sleep_ms(20);
+        bool r2 = imu_read_bytes(addr, ICM20948_GYRO_XOUT_H, g2, 6);
+        char buf[320];
+        snprintf(buf, sizeof(buf),
+            "{\"addr\":\"0x%02X\",\"who\":\"0x%02X\","
+            "\"pwr1\":\"0x%02X\",\"pwr2\":\"0x%02X\","
+            "\"int1\":\"0x%02X\",\"gcfg1\":\"0x%02X\",\"smplrt\":\"0x%02X\","
+            "\"g1\":[%u,%u,%u,%u,%u,%u],"
+            "\"g2\":[%u,%u,%u,%u,%u,%u],"
+            "\"z1\":%d,\"z2\":%d}",
+            addr, who, pwr1, pwr2, int1, gcfg1, smplrt,
+            g1[0],g1[1],g1[2],g1[3],g1[4],g1[5],
+            g2[0],g2[1],g2[2],g2[3],g2[4],g2[5],
+            (int16_t)((g1[4]<<8)|g1[5]), (int16_t)((g2[4]<<8)|g2[5]));
+        emit_ack_ok(id, buf);
+        return;
+    }
     emit_ack_err(id, "bad_cmd", "unknown cmd");
 }
 
@@ -611,11 +655,10 @@ int main(void) {
         state.enc_l = ENC_L_SIGN * enc_l_reader.count;
         state.enc_r = ENC_R_SIGN * enc_r_reader.count;
 
-        /* ── Read IMU ── */
-        imu_read_gyro_z(&state.imu);
-
         /* ── 50 Hz PID control loop ── */
         if (absolute_time_diff_us(get_absolute_time(), next_control) <= 0) {
+            /* Read IMU at control rate (not every loop — I2C needs time) */
+            imu_read_gyro_z(&state.imu);
             uint32_t ctrl_now = now_ms();
             uint32_t ctrl_dt_ms = ctrl_now - last_control_ts;
             float dt = (float)ctrl_dt_ms / 1000.0f;
