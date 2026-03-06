@@ -51,10 +51,12 @@
 #define TRACK_WIDTH_M      0.155f
 
 /* ── PID defaults (tunable via command) ────────────────────────────── */
-#define PID_KP_DEFAULT     2.0f
-#define PID_KI_DEFAULT     8.0f
-#define PID_KD_DEFAULT     0.05f
-#define PID_INTEGRAL_MAX   1.0f    /* anti-windup clamp */
+#define PID_KP_DEFAULT     0.003f
+#define PID_KI_DEFAULT     0.002f
+#define PID_KD_DEFAULT     0.0f
+#define PID_INTEGRAL_MAX   50.0f   /* anti-windup clamp (RPM·s units) */
+#define PID_FF_GAIN        0.004f  /* feed-forward: PWM per RPM (empirical) */
+#define PWM_OUTPUT_MAX     0.40f   /* clamp: motor reverses above ~0.5 on USB power */
 #define PID_DT_S           0.02f   /* 50 Hz control loop */
 #define CONTROL_LOOP_MS    20u     /* = 1/PID_DT_S in ms */
 
@@ -160,20 +162,28 @@ static float pid_update(pid_state_t *p, float setpoint, float measured, float dt
     /* Proportional */
     float p_term = p->kp * error;
 
-    /* Integral with anti-windup */
-    p->integral += error * dt;
-    p->integral = clampf(p->integral, -PID_INTEGRAL_MAX, PID_INTEGRAL_MAX);
+    /* Integral with conditional anti-windup:
+     * Only accumulate when output would not be saturated,
+     * or when error opposes the integral (allows unwind). */
+    float new_integral = clampf(p->integral + error * dt,
+                                -PID_INTEGRAL_MAX, PID_INTEGRAL_MAX);
+    float ff = setpoint * PID_FF_GAIN;
+    float test_out = ff + p_term + p->ki * new_integral;
+    if (fabsf(test_out) < PWM_OUTPUT_MAX || (error * p->integral < 0.0f)) {
+        p->integral = new_integral;
+    }
     float i_term = p->ki * p->integral;
 
-    /* Derivative (on error, with simple filtering) */
+    /* Derivative (on error) */
     float d_term = 0.0f;
     if (dt > 0.0f) {
         d_term = p->kd * (error - p->prev_error) / dt;
     }
     p->prev_error = error;
 
-    /* Output clamped to [-1, 1] normalized PWM */
-    p->output = clamp_unit(p_term + i_term + d_term);
+    /* Feed-forward + PID output, clamped to [-max, +max] PWM */
+    p->output = clampf(ff + p_term + i_term + d_term,
+                        -PWM_OUTPUT_MAX, PWM_OUTPUT_MAX);
     return p->output;
 }
 
