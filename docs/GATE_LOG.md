@@ -21,3 +21,10 @@
   - Conditional anti-windup (stop integral accumulation when output saturated)
   - PWM output clamped to ±0.40 (motor reversal above ~0.5 on USB power)
   - Gains rescaled for RPM error units (original Kp=2.0 caused instant saturation)
+
+## F2-2: IMU calibration — FAIL (hardware not connected)
+- Date: 2026-03-07
+- Error: `no_imu` — ICM-20948 not detected on I2C1 (GP6/GP7)
+- Yaw: stuck at 0.00 (no IMU data)
+- Action: verify I2C wiring (SDA=GP6, SCL=GP7, 3.3V, GND)
+- Note: ROS2 bridge can operate without IMU using encoder-only odometry
