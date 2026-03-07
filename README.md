@@ -12,9 +12,11 @@ RPLidar C1 → Pi 5 (ROS2 Jazzy: SLAM / Nav2) ↔ UART ↔ RP2040 (PID + IMU + M
 
 ## Current Status
 
-- **Firmware v2**: PID closed-loop speed control, ICM-20948 gyro Z yaw tracking, runtime PID tuning via `set_pid`
-- **ROS2 bridge**: `auro_bridge_node` translates `/cmd_vel` ↔ `set_rpm` and `tele` ↔ `/odom` + TF
+- **Firmware v2**: PID closed-loop speed control (Kp=0.003, Ki=0.002, FF=0.004), ICM-20948 gyro Z yaw tracking, runtime PID tuning via `set_pid`
+- **ROS2 bridge**: `auro_bridge_node` translates `/cmd_vel` ↔ `set_rpm` and `tele` ↔ `/odom` + TF — verified on Pi 5 at 19.6 Hz
 - **Nav2**: Full navigation stack with AMCL, DWB controller, NavFn planner, costmaps tuned for RPLidar C1
+- **Gates passed**: F2-0 (build), F2-1 (PID), F2-2 (IMU), F2-3 (PID tuning), F2-4 (USB bridge), F2-5 (ROS2 bridge)
+- **Next**: F2-6a (mobile SLAM map building)
 
 ## Repository Layout
 
@@ -72,11 +74,11 @@ ros2 launch auro_nav auro_nav2_launch.py map:=/path/to/my_room.yaml
 ## Hardware
 
 - **Controller**: Cytron Maker Pi RP2040
-- **IMU**: ICM-20948 on I2C1 (GP6/GP7)
-- **Motors**: Dual H-bridge on GP8-GP11, 20kHz PWM
+- **IMU**: ICM-20948 on I2C0 (GP16/GP17), addr 0x69
+- **Motors**: Dual H-bridge on GP8-GP11, 20kHz PWM (clamp at 0.50 — reversal above ~0.6)
 - **Encoders**: Quadrature via PIO (GP2/3 left, GP4/5 right)
-- **LiDAR**: Slamtec RPLidar C1 (USB to Pi 5)
+- **LiDAR**: Slamtec RPLidar C1 (USB to Pi 5, /dev/rplidar)
 - **Compute**: Raspberry Pi 5, Ubuntu Server 24.04, ROS2 Jazzy
-- **Transport**: UART (Pi5 GPIO14/15 ↔ RP2040 GP0/GP1)
+- **Transport**: USB CDC (/dev/ttyACM0) — UART (GP0/GP1 ↔ Pi5 GPIO14/15) available as alternate
 
 See `HARDWARE_MAP.md` for full pin assignments and kinematics.

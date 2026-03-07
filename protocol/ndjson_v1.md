@@ -27,7 +27,7 @@ RPM command:
 ```json
 {"type":"cmd","id":"uuid","ts":0,"cmd":"set_rpm","left":120,"right":120}
 ```
-Current firmware subsets map RPM targets to open-loop PWM; closed-loop control is a later phase.
+Firmware v2 uses closed-loop PID with feed-forward to achieve target RPM.
 
 Emergency stop:
 ```json
@@ -89,25 +89,28 @@ Error:
 {"type":"ack","id":"uuid","ok":false,"error":{"code":"bad_cmd","message":"..."}}
 ```
 
-## Implementation Status (February 22, 2026)
+## Implementation Status (March 7, 2026)
 
 Protocol v1 is the contract; firmware tracks it in staged subsets.
 
-- MicroPython (`firmware_mpy/main.py`) currently implements:
-  - `ping`, `set_log`, `version`, `i2c_scan`, `arm`, `disarm`, `stop`, `set_pwm`, `set_rpm` (open-loop mapping), `cal_encoders`, `cal_imu` (noop ack)
-- PicoSDK (`firmware_sdk/src/main.c`) currently implements:
-  - `ping`, `version`, `arm`, `disarm`, `stop`, `set_pwm`, `set_rpm` (open-loop mapping), `cal_encoders`, `cal_imu` (noop ack)
-- Deferred in both tracks (planned later gates):
-  - hardware-backed IMU calibration flow
+- PicoSDK (`firmware_sdk/src/main.c`) implements:
+  - `ping`, `version`, `arm`, `disarm`, `stop`, `set_pwm`, `set_rpm` (closed-loop PID), `cal_encoders`, `cal_imu` (500-sample gyro bias), `set_pid`, `imu_diag`
 
 ## v2 Additions (auro-nav)
 
-### PID tuning command (NEW)
+### PID tuning command
 ```json
-{"type":"cmd","id":"uuid","ts":0,"cmd":"set_pid","kp":2.0,"ki":8.0,"kd":0.05}
+{"type":"cmd","id":"uuid","ts":0,"cmd":"set_pid","kp":0.003,"ki":0.002,"kd":0.0}
 ```
-Ack returns: `{"ok":true,"data":{"kp":2.000,"ki":8.000,"kd":0.050}}`
+Ack returns: `{"ok":true,"data":{"kp":0.003,"ki":0.002,"kd":0.000}}`
 Resets PID integral and previous error on both wheels.
+Default gains: Kp=0.003, Ki=0.002, Kd=0.0, feed-forward=0.004 PWM/RPM.
+
+### IMU diagnostic command
+```json
+{"type":"cmd","id":"uuid","ts":0,"cmd":"imu_diag"}
+```
+Ack returns register readback and two raw gyro samples 20ms apart for debugging.
 
 ### Updated `cal_imu` (was noop, now real)
 Robot must be stationary. Collects 500 gyro Z samples over ~1 second.
@@ -131,8 +134,10 @@ Ack returns: `{"ok":true,"data":{"bias_z":-0.234,"samples":500}}`
   "rpm_r":0.0,
   "yaw":0.0,
   "pid":true,
+  "gz":0.0,
   "fault":null
 }
 ```
 - `pid` (boolean): true when closed-loop PID active, false when open-loop (set_pwm mode)
 - `yaw` (float): integrated gyro Z heading in degrees [-180, 180], 0.0 if IMU not calibrated
+- `gz` (float): raw gyro Z in dps (bias-compensated), useful for IMU debugging
