@@ -27,6 +27,24 @@
   - F2-4 USB bridge: ping OK, bidirectional NDJSON PASS
 - Telemetry v2 fields confirmed: pid=true, gz=±0.4 dps at rest, yaw=0.00
 
+## PWM clamp tuning — 0.80 → 0.45
+- Date: 2026-03-08
+- Problem: robot not driving straight, user requested higher PWM
+- Initial attempt: raised PWM_OUTPUT_MAX from 0.50 to 0.80
+- Result: motors physically REVERSE above ~0.50 PWM (H-bridge hardware limit)
+  - Forward 80 RPM: left motor went -30 RPM (backward!) at PWM 0.80
+  - Backward 80 RPM: same reversal pattern
+- Fix: set PWM_OUTPUT_MAX = 0.45 (safe margin below reversal threshold)
+- RPM sweep test (20/30/40/50/60 RPM), all PASS:
+  - 20 RPM: L=18.3 R=16.7 (diff 1.6) — PWM max 0.12
+  - 30 RPM: L=28.6 R=26.9 (diff 1.7) — PWM max 0.17
+  - 40 RPM: L=38.5 R=35.2 (diff 3.3) — PWM max 0.22
+  - 50 RPM: L=47.8 R=44.1 (diff 3.7) — PWM max 0.29
+  - 60 RPM: L=47.0 R=47.2 (saturating at clamp, balanced) — PWM max 0.43
+- Max useful speed: ~50 RPM (60 RPM saturates but no reversal)
+- Left motor consistently 2-4 RPM faster than right — acceptable for Nav2 (odom compensates)
+- Turn tests (soft/hard left/right) all PASS at ±50 RPM
+
 ## F2-0: Firmware build — PASS (initial)
 - Date: 2026-03-07
 - UF2 size: 118,784 bytes

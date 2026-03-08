@@ -56,7 +56,7 @@
 #define PID_KD_DEFAULT     0.0f
 #define PID_INTEGRAL_MAX   50.0f   /* anti-windup clamp (RPM·s units) */
 #define PID_FF_GAIN        0.004f  /* feed-forward: PWM per RPM (empirical) */
-#define PWM_OUTPUT_MAX     0.50f   /* clamp: motor reverses above ~0.6 PWM */
+#define PWM_OUTPUT_MAX     0.45f   /* clamp: motors reverse above ~0.50 PWM (H-bridge limit) */
 #define PID_DT_S           0.02f   /* 50 Hz control loop */
 #define CONTROL_LOOP_MS    20u     /* = 1/PID_DT_S in ms */
 

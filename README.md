@@ -78,7 +78,7 @@ ros2 launch auro_nav auro_nav2_launch.py map:=/path/to/my_room.yaml
 
 - **Controller**: Cytron Maker Pi RP2040
 - **IMU**: ICM-20948 on I2C0 (GP16/GP17), addr 0x69
-- **Motors**: Dual H-bridge on GP8-GP11, 20kHz PWM (clamp at 0.50 — reversal above ~0.6)
+- **Motors**: Dual H-bridge on GP8-GP11, 20kHz PWM (clamp at 0.45 — reversal above ~0.50)
 - **Encoders**: Quadrature via PIO (GP2/3 left, GP4/5 right)
 - **LiDAR**: Slamtec RPLidar C1 (USB to Pi 5, /dev/rplidar)
 - **Compute**: Raspberry Pi 5, Ubuntu Server 24.04, ROS2 Jazzy
