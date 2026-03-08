@@ -16,8 +16,8 @@ RPLidar C1 → Pi 5 (ROS2 Jazzy: SLAM / Nav2) ↔ UART ↔ RP2040 (PID + IMU + M
 - **ROS2 bridge**: `auro_bridge_node` translates `/cmd_vel` ↔ `set_rpm` and `tele` ↔ `/odom` + TF — verified on Pi 5 at 19.6 Hz
 - **Nav2**: Full navigation stack with AMCL, DWB controller, NavFn planner, costmaps tuned for RPLidar C1
 - **Web teleop**: `web_teleop_node` — browser-based driving UI at `http://<pi5-ip>:8080` (WASD/touch/D-pad, no SSH needed)
-- **Gates passed**: F2-0 (build), F2-1 (PID), F2-2 (IMU), F2-3 (PID tuning), F2-4 (USB bridge), F2-5 (ROS2 bridge), F2-6a (in progress)
-- **Next**: F2-6a SLAM mapping, F2-6b Nav2 autonomous navigation
+- **Gates passed**: F2-0 (build), F2-1 (PID), F2-2 (IMU), F2-3 (PID tuning), F2-4 (USB bridge), F2-5 (ROS2 bridge) — all re-verified on v2 firmware 2026-03-08
+- **Next**: F2-6a SLAM arena mapping, F2-6b Nav2 autonomous navigation
 
 ## Repository Layout
 

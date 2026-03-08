@@ -7,13 +7,27 @@
   - nav2_params: local costmap 2x2, inflation_radius 0.25
 - SLAM launch: PASS (slam_toolbox, sllidar_node, auro_bridge all running)
 - Topics verified: /scan ~10 Hz, /odom ~10 Hz, /tf, /tf_static, /cmd_vel
-- Web teleop node added: browser-based driving at http://<pi5-ip>:8080
+- Web teleop node added: browser-based driving at http://pi5-ip:8080
   - D-pad with 9 directions, WASD/arrow keyboard, touch support
   - Adjustable linear/angular speed, 200ms command rate
   - Replaces teleop_twist_keyboard (no SSH needed for driving)
+- Firmware re-flash: v0 → v2 (sdk-v2-pid) via picotool on Mac
+- Full gate re-test on Mac USB: all PASS (see below)
 - Map recording: pending (next: drive arena, save map)
 
-## F2-0: Firmware build — PASS
+## F2-0 through F2-4: Re-verified on v2 firmware — ALL PASS
+- Date: 2026-03-08
+- Firmware was found running sdk-v0 (old); re-flashed to sdk-v2-pid via picotool
+- UF2 size: 121,344 bytes (rebuilt from current source)
+- Full automated gate test results:
+  - F2-0 Build: fw=sdk-v2-pid PASS
+  - F2-1 PID: target 40 RPM, avg L=38.5 R=35.9, PWM 0.163–0.202 PASS
+  - F2-2 IMU: cal_imu bias_z=-0.4165, 500 samples, WHO=0xEA, addr=0x69 PASS
+  - F2-3 PID tuning: set_pid ack Kp=0.003 Ki=0.002 Kd=0.0 PASS
+  - F2-4 USB bridge: ping OK, bidirectional NDJSON PASS
+- Telemetry v2 fields confirmed: pid=true, gz=±0.4 dps at rest, yaw=0.00
+
+## F2-0: Firmware build — PASS (initial)
 - Date: 2026-03-07
 - UF2 size: 118,784 bytes
 - Build: zero errors (99/99 ninja targets)
