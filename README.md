@@ -15,8 +15,9 @@ RPLidar C1 → Pi 5 (ROS2 Jazzy: SLAM / Nav2) ↔ UART ↔ RP2040 (PID + IMU + M
 - **Firmware v2**: PID closed-loop speed control (Kp=0.003, Ki=0.002, FF=0.004), ICM-20948 gyro Z yaw tracking, runtime PID tuning via `set_pid`
 - **ROS2 bridge**: `auro_bridge_node` translates `/cmd_vel` ↔ `set_rpm` and `tele` ↔ `/odom` + TF — verified on Pi 5 at 19.6 Hz
 - **Nav2**: Full navigation stack with AMCL, DWB controller, NavFn planner, costmaps tuned for RPLidar C1
-- **Gates passed**: F2-0 (build), F2-1 (PID), F2-2 (IMU), F2-3 (PID tuning), F2-4 (USB bridge), F2-5 (ROS2 bridge)
-- **Next**: F2-6a (mobile SLAM map building)
+- **Web teleop**: `web_teleop_node` — browser-based driving UI at `http://<pi5-ip>:8080` (WASD/touch/D-pad, no SSH needed)
+- **Gates passed**: F2-0 (build), F2-1 (PID), F2-2 (IMU), F2-3 (PID tuning), F2-4 (USB bridge), F2-5 (ROS2 bridge), F2-6a (in progress)
+- **Next**: F2-6a SLAM mapping, F2-6b Nav2 autonomous navigation
 
 ## Repository Layout
 
@@ -29,6 +30,7 @@ firmware_sdk/          RP2040 PicoSDK firmware (PID + IMU + NDJSON)
 ros2_ws/src/auro_nav/  ROS2 Jazzy package (runs on Pi 5)
   auro_nav/            Python package
     auro_bridge_node.py   UART ↔ ROS2 bridge
+    web_teleop_node.py    Browser-based teleop (http://pi5:8080)
   config/              YAML configs
     nav2_params.yaml      Nav2 full config
     slam_params.yaml      slam_toolbox config
@@ -64,8 +66,9 @@ cd ros2_ws
 colcon build --packages-select auro_nav
 source install/setup.bash
 
-# Build a map (drive with teleop)
+# Build a map (drive with web teleop)
 ros2 launch auro_nav mobile_slam_launch.py
+ros2 run auro_nav web_teleop_node  # open http://<pi5-ip>:8080
 
 # Autonomous navigation (with saved map)
 ros2 launch auro_nav auro_nav2_launch.py map:=/path/to/my_room.yaml

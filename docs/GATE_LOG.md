@@ -1,5 +1,18 @@
 # Gate Log
 
+## F2-6a: SLAM stack + web teleop — IN PROGRESS
+- Date: 2026-03-08
+- Config tuning for 2m x 2m arena: PASS
+  - slam_params: resolution 0.025, travel thresholds 0.05
+  - nav2_params: local costmap 2x2, inflation_radius 0.25
+- SLAM launch: PASS (slam_toolbox, sllidar_node, auro_bridge all running)
+- Topics verified: /scan ~10 Hz, /odom ~10 Hz, /tf, /tf_static, /cmd_vel
+- Web teleop node added: browser-based driving at http://<pi5-ip>:8080
+  - D-pad with 9 directions, WASD/arrow keyboard, touch support
+  - Adjustable linear/angular speed, 200ms command rate
+  - Replaces teleop_twist_keyboard (no SSH needed for driving)
+- Map recording: pending (next: drive arena, save map)
+
 ## F2-0: Firmware build — PASS
 - Date: 2026-03-07
 - UF2 size: 118,784 bytes

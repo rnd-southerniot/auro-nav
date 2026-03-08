@@ -26,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'auro_bridge_node = auro_nav.auro_bridge_node:main',
+            'web_teleop_node = auro_nav.web_teleop_node:main',
         ],
     },
 )
