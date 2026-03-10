@@ -1,7 +1,7 @@
 # Gate Log
 
-## F2-6a: SLAM stack + web teleop — IN PROGRESS
-- Date: 2026-03-08
+## F2-6a: SLAM arena mapping — PASS
+- Date: 2026-03-10
 - Config tuning for 2m x 2m arena: PASS
   - slam_params: resolution 0.025, travel thresholds 0.05
   - nav2_params: local costmap 2x2, inflation_radius 0.25
@@ -13,7 +13,13 @@
   - Replaces teleop_twist_keyboard (no SSH needed for driving)
 - Firmware re-flash: v0 → v2 (sdk-v2-pid) via picotool on Mac
 - Full gate re-test on Mac USB: all PASS (see below)
-- Map recording: pending (next: drive arena, save map)
+- Bug fix: slam_toolbox lifecycle node was not auto-activated
+  - async_slam_toolbox_node is a lifecycle node requiring configure→activate
+  - Fixed mobile_slam_launch.py to use LifecycleNode with auto-activation
+- Map saved: arena_v1.pgm (115x101 px, 2.9m x 2.5m at 0.025 m/pixel)
+- Bag recorded: arena_test_20260310_134602 (64.5 MiB, 14 min, 62K msgs)
+  - /scan: 8452, /odom: 16527, /tf: 37052
+- Next: F2-6b Nav2 autonomous navigation test
 
 ## F2-0 through F2-4: Re-verified on v2 firmware — ALL PASS
 - Date: 2026-03-08

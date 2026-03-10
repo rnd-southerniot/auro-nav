@@ -6,7 +6,11 @@ import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
+from launch_ros.actions import LifecycleNode, Node
+from launch_ros.event_handlers import OnStateTransition
+from launch.actions import EmitEvent, RegisterEventHandler
+from launch_ros.events.lifecycle import ChangeState
+from lifecycle_msgs.msg import Transition
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -48,12 +52,33 @@ def generate_launch_description():
             name='static_tf_base_laser',
         ),
 
-        # SLAM Toolbox (mapping mode)
-        Node(
+        # SLAM Toolbox (mapping mode) — lifecycle node, auto-activated
+        slam_node := LifecycleNode(
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
             name='slam_toolbox',
+            namespace='',
             parameters=[slam_cfg],
             output='screen',
         ),
+
+        # Auto-configure on start
+        RegisterEventHandler(
+            OnStateTransition(
+                target_lifecycle_node=slam_node,
+                start_state='configuring',
+                goal_state='inactive',
+                entities=[
+                    EmitEvent(event=ChangeState(
+                        lifecycle_node_matcher=lambda node: True,
+                        transition_id=Transition.TRANSITION_ACTIVATE,
+                    )),
+                ],
+            )
+        ),
+
+        EmitEvent(event=ChangeState(
+            lifecycle_node_matcher=lambda node: True,
+            transition_id=Transition.TRANSITION_CONFIGURE,
+        )),
     ])
